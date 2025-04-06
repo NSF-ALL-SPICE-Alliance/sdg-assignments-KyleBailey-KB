@@ -197,14 +197,21 @@ To circle back and reinforce how the linear regression (line drawn through our s
   - What does this look like on scatter plot?
   
 ```{r, warning=FALSE, message=FALSE}
-ggplot(sdr_data, aes(x = goal_12_score, 
-                     y = goal_9_score)) +
+library(plotly)
+
+
+TS <- ggplot(sdr_data, aes(x = goal_3_score, 
+                           y = goal_6_score, label = country)) +
   geom_point() +
-  geom_smooth() +
-  stat_cor() +
-  theme_minimal() 
+  geom_smooth(method = "lm", se = FALSE) +
+  stat_cor(aes(label = paste("R =", ..r.., ", p =", ..p..)), label.x = 3, label.y = 3) +
+  theme_minimal()
+
+ggplotly(TS)
 
 ```
+
+
 
 ### <span style="color: red;">Challenge 1</span>
 
@@ -220,3 +227,5 @@ ggplot(sdr_data, aes(x = goal_12_score,
       - are there any points that don't follow the trend (outliers)
         
         - which country(s) are outliers?
+        
+        The graph shows a strong positive correlation between goal_3_score and goal_6_score, with an R-value of 0.76, indicating that as countries score higher on goal 3 (Good Health and Well-Being), they also tend to score higher on goal 6 (Clean Water and Sanitation). The low P score tells me that this correlation did not happen by chance and is indeed linked to one another. I can tell there is a positive correlation between these two goals. Despite the observation, there are a few outliers but no countries deviate too far such as Oceania and the African Republic. However, the higher a country's Good Health and Well-Being score is the higher their Clean Water and Sanitation score is. 
