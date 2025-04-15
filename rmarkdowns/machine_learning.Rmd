@@ -250,7 +250,7 @@ To answer this question, we train a random forest model to make predictions of m
 rf_obesity <- randomForest(normalized_score_sdg2_obesity ~ .,
                              data = sdr_data_imputed,
                              importance = TRUE)
-#Challenge Dos
+#Challenge Dos 
 ```
 
 Our model is relatively accurate with a mean error rate of ~ 10 
