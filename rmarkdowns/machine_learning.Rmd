@@ -217,14 +217,15 @@ fviz_nbclust(sdr_data_imputed, kmeans, method = "silhouette")
 The kmeans() function clusters countries into groups (int this case 2, visualized above) based on 84 SDG scores
 
 ```{r}
-k2 <- kmeans(sdr_data_imputed, centers = 2)
+k5 <- kmeans(sdr_data_imputed, centers = 5)
+#Challenge Uno
 ```
 
 
 We can visualize the outputs of the kmeans function with fviz_cluster()
 
 ```{r}
-fviz_cluster(k2, data = sdr_data_imputed) +
+fviz_cluster(k5, data = sdr_data_imputed) +
   theme_minimal()
 ```
 
@@ -232,7 +233,7 @@ You can view the countries and their assigned cluster in a dataframe with the co
 
 
 ```{r}
-country_clusters <- as.data.frame(k2$cluster)
+country_clusters <- as.data.frame(k5$cluster)
 ```
 
 
@@ -246,9 +247,10 @@ To answer this question, we train a random forest model to make predictions of m
 
 
 ```{r}
-rf_matmort <- randomForest(normalized_score_sdg3_matmort ~ .,
+rf_obesity <- randomForest(normalized_score_sdg2_obesity ~ .,
                              data = sdr_data_imputed,
                              importance = TRUE)
+#Challenge Dos
 ```
 
 Our model is relatively accurate with a mean error rate of ~ 10 
@@ -257,14 +259,14 @@ The "% Var explained" value of 80.83 indicates that approximately 80.83% of the 
 
 
 ```{r}
-rf_matmort
+rf_obesity
 ```
 
 Now we can look at the variables most important in making the predictions
 
 
 ```{r}
-importance_df <- as.data.frame(rf_matmort$importance)
+importance_df <- as.data.frame(rf_obesity$importance)
 ```
 
 Let's take the top 10 and graph them
@@ -296,7 +298,7 @@ Lastly, we want to know how these important variables influence the prediction: 
 
 
 ```{r}
-pdp::partial(rf_matmort, pred.var = "normalized_score_sdg6_sanita", plot = TRUE)
+pdp::partial(rf_obesity, pred.var = "normalized_score_sdg6_sanita", plot = TRUE)
 ```
 
 
@@ -315,7 +317,7 @@ Now that we saw how one variable influences the models prediction, how about 2 v
 
 
 ```{r}
-pd <- pdp::partial(rf_matmort, pred.var = c("normalized_score_sdg6_sanita", "normalized_score_sdg3_u5mort"))
+pd <- pdp::partial(rf_obesity, pred.var = c("normalized_score_sdg6_sanita", "normalized_score_sdg3_u5mort"))
 # Default PDP
 plotPartial(pd)
 ```
@@ -344,7 +346,8 @@ Edit this code chunk `rf_matmort <- randomForest(normalized_score_sdg3_matmort ~
   - Run the remainder of the code chunks below to see the different outputs
     
     - *Hint* make sure to continue replacing rf_matmort with the new name you assign your random forest model
-
+    
+    
 
 
 
