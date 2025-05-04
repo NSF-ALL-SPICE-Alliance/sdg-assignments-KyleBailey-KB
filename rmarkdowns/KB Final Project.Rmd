@@ -1,0 +1,188 @@
+---
+title: "KB Final Project"
+author: "Kyle Bailey"
+date: "`r Sys.Date()`"
+output: html_document
+---
+### What SDG 2 Really Shows Us about Hunger
+
+
+### Setup
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse) # most popular R package
+library(here) # cuts out long file paths when reading in data (makes reproducible)
+library(janitor) # cleans column names
+library(naniar) # analyzes missing data
+library(cluster) 
+library(randomForest) # runs random forest algorithm
+library(missRanger) # imputes data through with random forest method
+library(factoextra) # visualizes clusters
+library(pdp)
+library(vembedr)
+library(rnaturalearth)
+```
+
+#To Label and Clean Data 
+
+```{r, message=FALSE}
+sdr_data <- read_csv(here("data/SDR-2023-Data.csv"))
+
+sdr_data <- sdr_data %>% 
+  clean_names()
+```
+
+#Assign Value for World Data
+
+```{r}
+world <- ne_countries(scale = "medium", returnclass = "sf") %>%
+  left_join(
+    sdr_data %>% 
+      select(iso3_code = country_code_iso3, normalized_score_sdg2_undernsh),
+    by = c("iso_a3" = "iso3_code")
+  )
+```
+
+#Mapping time
+
+```{r}
+#The WORLD gets Mapped 
+ggplot(world) +
+  geom_sf(aes(fill = normalized_score_sdg2_undernsh), color = "white", size = 0.1) +
+  scale_fill_viridis_c(
+    option = "magma",
+    direction = -1,
+    name = "Hunger Score",
+    na.value = "grey"
+  ) +
+  labs(
+    title = "Progress Toward Zero Hunger (SDG 2)",
+    subtitle = "Higher scores show better hunger outcomes towards 0 hunger goal",
+  ) +
+  theme_void() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "bottom"
+  )
+```
+
+### Breakdown
+This map gives us an overview of every country's progress towards achieving SDG (Sustainable Development Goal) 2: Zero Hunger. I have each country colored based on its score, with darker colors meaning achieved or in the process of achieving, and light colors not as much. This way, we can see which areas of the world undernourishment still is a major issue.
+
+Looking at the map, it’s clear that Africa is showing the most difficulties with this issue, with many countries in the region having the lowest scores and standing out in lighter shades. As for the rest of the world, though there are other areas. Places such as Europe and North America, generally show much higher scores and darker colors, which gives us the indication that hunger is much less of a problem for those countries. This shows us how uneven progress toward zero hunger is global. By mapping the scores like this, we can see the regions where more attention and resources are needed. 
+
+Overall, this map here makes it easier to see not just which countries are doing well, but also where hunger is still a serious challenge.
+
+#Graphing Both Undernourishment and Childhood Obesity
+
+```{r}
+# Region data becomes whole with sdr_data
+world_regions <- ne_countries(scale = "medium", returnclass = "sf") %>%
+  as_tibble() %>% 
+  select(iso_a3, region = region_un)
+
+sdr_data <- sdr_data %>% 
+  left_join(world_regions, by = c("country_code_iso3" = "iso_a3"))
+
+# For filtering Null and Plotting
+sdr_data %>%
+  filter(!is.na(normalized_score_sdg2_obesity),
+         !is.na(normalized_score_sdg2_undernsh)) %>%
+  ggplot(aes(normalized_score_sdg2_obesity, normalized_score_sdg2_undernsh)) +
+  geom_point(aes(color = region), size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(
+    title = "Double Challenge of Malnutrition",
+    x = "Childhood Obesity Score (Higher = Worse)",
+    y = "Undernourishment Score (Lower = Worse)",
+    color = "Region" 
+  ) +
+  theme_minimal()
+
+```
+
+### Breakdown
+
+This scatterplot lets us check if countries with childhood obesity also struggle with undernourishment. Each dot is a country, and I’ve made them different colors based on which part of the world they’re in, just to make it easier to spot patterns. The slanted line running through the plot is there to show if a general trend exists-even if it’s not a very strong one in this case. At the very top, there’s a row of dots: these mark countries that got a perfect score for undernourishment, which basically means they’ve hit the SDG 2 goal for zero hunger. Most of those top scorers are in Europe or North America.
+
+When I look at the scatter, I don’t see much of a link between obesity and undernourishment. Some places have high obesity but aren’t struggling with hunger, and others have low scores for both-or even both issues showing up at once. Before I made this graph, I filtered out any countries that didn’t have data for either variable, just so we’re only looking at the complete and reliable numbers. This does mean a handful of countries are left off the chart.
+
+All in all, this scatterplot shows that having lots of obesity doesn’t always mean hunger is gone-and vice versa. Different countries and regions are dealing with their own mix of nutrition problems, and there’s no one-size-fits-all story here.
+
+#Graphing Both Crop Yield and Undernourishment
+
+```{r}
+# Plotting the relationship between crop yields and hunger scores
+sdr_data %>%
+  filter(!is.na(normalized_score_sdg2_crlyld),
+         !is.na(normalized_score_sdg2_undernsh)) %>%
+  ggplot(aes(normalized_score_sdg2_crlyld, normalized_score_sdg2_undernsh)) +
+  geom_point(aes(color = region), size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", color = "blue", se = FALSE) +
+  labs(
+    title = "Crop Yields and Hunger: Does More Food Mean Less Hunger?",
+    x = "Crop Yield Score (Higher = More Productive)",
+    y = "Hunger Score (Higher = Less Hunger)",
+    color = "Region"
+  ) +
+  theme_minimal()
+
+```
+
+### Breakdown
+
+After looking at the big map and getting a sense of where hunger is still a problem (especially in places like Africa), and then seeing that hunger and obesity don’t always go hand-in-hand, I wanted to dig deeper into why hunger hangs on in some countries. One thing that seemed obvious to check is whether countries that struggle with hunger just aren’t able to grow enough food. So, for this plot, I compared each country’s crop yield score with its hunger score, and again, I’ve color-coded by region to make it easier to spot patterns.
+
+Just like before, I filtered out any countries that were missing data for either of these scores, so what you see here is based on reliable info only. The line through the plot shows if there’s any trend, but I noticed this relationship isn’t super strong. Some places that have good crop yields still show a lot of hunger, while others with not as great yields appear here to be doing okay on hunger. That tells me there’s more to the story than just how much food is being grown; things like food distribution, affordability, and maybe even politics or climate could be making a big difference.
+
+Basically, growing more food doesn’t guarantee the end of hunger, and you can see that in these dots and the spread on this chart. This plot kind of ties everything together so far: hunger is a complex issue, and it’s about way more than just farming harder.
+
+# Setting up Bottom 5 Countries in Africa 
+
+```{r}
+africa_bottom <- sdr_data %>%
+  filter(region == "Africa", !is.na(normalized_score_sdg2_undernsh)) %>%
+  arrange(normalized_score_sdg2_undernsh) %>%
+  select(Country = country, `Hunger Score` = normalized_score_sdg2_undernsh) %>%
+  slice(1:5) #This took so long
+
+```
+
+
+```{r}
+africa_bottom %>%
+  ggplot(aes(x = reorder(Country, `Hunger Score`), y = `Hunger Score`)) +
+  geom_col(fill = "red") +
+  coord_flip() +
+  labs(
+    title = "Top 5 African Countries Struggling Most with Hunger",
+    x = "",
+    y = "Hunger Score (Higher = Better)"
+  ) +
+  theme_minimal()
+```
+
+# Actual Numbers For Bottom 5 Hunger Score
+
+```{r}
+sdr_data %>%
+  filter(region == "Africa", !is.na(normalized_score_sdg2_undernsh)) %>%
+  arrange(normalized_score_sdg2_undernsh) %>%
+  select(Country = country, `Hunger Score` = normalized_score_sdg2_undernsh) %>%
+  slice(1:5) %>%
+  knitr::kable(align = "c", caption = "African Countries Facing the Most Hunger Challenges")
+
+```
+
+### Breakdown 
+
+Looking back at all these charts, it’s clear that the hunger story isn’t simple. We started out with that world map, where we could instantly see Africa popping out as a place where hunger is still a huge challenge. Then we took a closer look and realized that hunger and obesity don’t always move together-sometimes you fix one problem, and another shows up. We also checked whether just growing more food fixes hunger, and the answer was, not always; there’s a lot more going on with how food gets to people.
+
+What surprised me most is that there are countries with decent crop yields but still a lot of hunger, so clearly it’s not just about what you grow, but what actually reaches the plates of people. I wanted to focus on Africa at the end to be sure that we didn't lose sight of the places that needed the help the most. 
+
+Though the datasheet used is a little dated, behind every one of these numbers are real people, real families, trying to get by and hoping for change. We cannot forget that.
+
+If there’s one thing these visuals show, it’s that ending hunger is a big task, but with the right attention and effort, we really can make a difference where it’s needed most.
